@@ -1,6 +1,7 @@
 import type { ExplorationConfig } from '../types';
 import { WORLD_COUNTRIES } from './world-countries';
 import { US_STATES } from './us-states';
+import { TEXAS_STATE_PARKS } from './texas-state-parks';
 
 /**
  * Exploration configurations.
@@ -9,6 +10,8 @@ import { US_STATES } from './us-states';
  * 1. Create a new file with location definitions (like world-countries.ts or us-states.ts)
  * 2. Add a new ExplorationConfig entry to this array
  * 3. The app will automatically create a new tab for it
+ *
+ * See ADDING_EXPLORATIONS.md for a full walkthrough.
  */
 export const EXPLORATIONS: ExplorationConfig[] = [
   {
@@ -40,6 +43,27 @@ export const EXPLORATIONS: ExplorationConfig[] = [
     projection: 'geoAlbersUsa',
     projectionConfig: {
       scale: 1000,
+    },
+  },
+  {
+    id: 'texas-state-parks',
+    name: 'TX State Parks',
+    icon: '\u{1F332}',
+    description: 'Track Texas state parks, natural areas, and historic sites you have visited',
+    mapType: 'custom',
+    geoUrl: '/geo/us-states-10m.json',
+    locations: TEXAS_STATE_PARKS,
+    topoKey: 'states',
+    matchProperty: 'name',
+    useMarkers: true,
+    geoFilter: {
+      property: 'name',
+      values: ['Texas'],
+    },
+    projection: 'geoMercator',
+    projectionConfig: {
+      scale: 2400,
+      center: [-99.5, 31.5],
     },
   },
 ];

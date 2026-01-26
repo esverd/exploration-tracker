@@ -4,7 +4,7 @@ export interface ExplorationConfig {
   name: string;
   icon: string;
   description?: string;
-  mapType: 'world' | 'us-states';
+  mapType: 'world' | 'us-states' | 'custom';
   geoUrl: string;
   locations: LocationConfig[];
   projection?: string;
@@ -13,12 +13,39 @@ export interface ExplorationConfig {
   topoKey: string;
   /** Property in geography.properties to match location IDs */
   matchProperty: string;
+
+  /**
+   * When true, locations are rendered as point markers on the map
+   * instead of filled geographic regions. Each location must have
+   * a `coordinates` field ([longitude, latitude]).
+   */
+  useMarkers?: boolean;
+
+  /**
+   * Optional filter to control which geographies from the TopoJSON
+   * are rendered as the background map. Useful when a broad TopoJSON
+   * file is used but only a subset should be shown (e.g. show only
+   * Texas from the full US states file).
+   *
+   * If omitted, all geographies are rendered.
+   */
+  geoFilter?: {
+    /** Property name in geography.properties to test */
+    property: string;
+    /** Values that should be included */
+    values: string[];
+  };
 }
 
 /** Definition of a single location within an exploration */
 export interface LocationConfig {
   id: string;
   name: string;
+  /**
+   * Coordinates as [longitude, latitude]. Required when the
+   * exploration uses `useMarkers: true`.
+   */
+  coordinates?: [number, number];
 }
 
 /** User's visit data for a single location */

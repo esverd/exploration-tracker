@@ -173,6 +173,36 @@ body {
   color: var(--color-text-secondary);
 }
 
+.progress-stats {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.progress-count {
+  font-weight: 600;
+  color: var(--color-text);
+  font-size: 0.95rem;
+}
+
+.progress-separator {
+  color: var(--color-text-muted);
+  margin: 0 1px;
+}
+
+.progress-label {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+.progress-pct {
+  font-weight: 600;
+  color: var(--color-visited);
+  flex-shrink: 0;
+  font-size: 0.9rem;
+}
+
 .progress-bar {
   flex: 1;
   height: 6px;
@@ -186,6 +216,13 @@ body {
   background: var(--color-visited);
   border-radius: 3px;
   transition: width 0.3s ease;
+}
+
+.empty-search {
+  padding: 24px 20px;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
 }
 
 /* ===== Side Panel (Location List) ===== */

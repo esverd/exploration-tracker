@@ -64,15 +64,21 @@ export function ExplorationView({ config, explorationData }: Props) {
             />
           </div>
           <div className="map-progress">
-            <span>
-              {visitedCount} / {totalCount} ({percentage}%)
-            </span>
+            <div className="progress-stats">
+              <span className="progress-count">
+                {visitedCount}
+                <span className="progress-separator">/</span>
+                {totalCount}
+              </span>
+              <span className="progress-label">explored</span>
+            </div>
             <div className="progress-bar">
               <div
                 className="progress-bar-fill"
                 style={{ width: `${percentage}%` }}
               />
             </div>
+            <span className="progress-pct">{percentage}%</span>
           </div>
         </div>
 

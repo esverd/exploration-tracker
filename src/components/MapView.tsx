@@ -3,6 +3,7 @@ import {
   ComposableMap,
   Geographies,
   Geography,
+  Marker,
   ZoomableGroup,
 } from 'react-simple-maps';
 import type { ExplorationConfig } from '../types';
@@ -33,13 +34,21 @@ function getLocationName(
   geo: { properties: Record<string, unknown> },
   config: ExplorationConfig
 ): string {
-  // Try to get a human-readable name from properties
   const name =
     geo.properties['NAME'] ||
     geo.properties['name'] ||
     geo.properties['NAME_LONG'] ||
     geo.properties[config.matchProperty];
   return String(name || 'Unknown');
+}
+
+function shouldShowGeo(
+  geo: { properties: Record<string, unknown> },
+  config: ExplorationConfig
+): boolean {
+  if (!config.geoFilter) return true;
+  const val = geo.properties[config.geoFilter.property];
+  return config.geoFilter.values.includes(String(val));
 }
 
 export const MapView = memo(function MapView({
@@ -49,41 +58,57 @@ export const MapView = memo(function MapView({
 }: Props) {
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
-  const handleMouseMove = useCallback(
+  const showTooltip = useCallback(
+    (name: string, visited: boolean, evt: React.MouseEvent) => {
+      setTooltip({
+        content: `${name}${visited ? ' \u2713' : ''}`,
+        x: evt.clientX + 12,
+        y: evt.clientY - 28,
+      });
+    },
+    []
+  );
+
+  const hideTooltip = useCallback(() => setTooltip(null), []);
+
+  /* ---------- Region (polygon) handlers ---------- */
+  const handleGeoMouseMove = useCallback(
     (
       geo: { properties: Record<string, unknown> },
       evt: React.MouseEvent
     ) => {
       const id = getLocationId(geo, config);
-      // Show the friendly display name from our config if we have a match
       const loc = id ? config.locations.find((l) => l.id === id) : null;
       const displayName = loc ? loc.name : getLocationName(geo, config);
       const visited = id ? visitedSet.has(id) : false;
-      setTooltip({
-        content: `${displayName}${visited ? ' \u2713' : ''}`,
-        x: evt.clientX + 12,
-        y: evt.clientY - 28,
-      });
+      showTooltip(displayName, visited, evt);
     },
-    [config, visitedSet]
+    [config, visitedSet, showTooltip]
   );
 
-  const handleMouseLeave = useCallback(() => {
-    setTooltip(null);
-  }, []);
-
-  const handleClick = useCallback(
+  const handleGeoClick = useCallback(
     (geo: { properties: Record<string, unknown> }) => {
       const id = getLocationId(geo, config);
-      if (id) {
-        // Check if this ID exists in our location config
-        const exists = config.locations.some((loc) => loc.id === id);
-        if (exists) {
-          onToggle(id);
-        }
+      if (id && config.locations.some((loc) => loc.id === id)) {
+        onToggle(id);
       }
     },
     [config, onToggle]
+  );
+
+  /* ---------- Marker (point) handlers ---------- */
+  const handleMarkerMouseMove = useCallback(
+    (locationId: string, name: string, evt: React.MouseEvent) => {
+      showTooltip(name, visitedSet.has(locationId), evt);
+    },
+    [visitedSet, showTooltip]
+  );
+
+  const handleMarkerClick = useCallback(
+    (locationId: string) => {
+      onToggle(locationId);
+    },
+    [onToggle]
   );
 
   const projectionConfig = (config.projectionConfig || {}) as {
@@ -91,6 +116,8 @@ export const MapView = memo(function MapView({
     center?: [number, number];
     rotate?: [number, number, number];
   };
+
+  const isMarkerMode = config.useMarkers === true;
 
   return (
     <>
@@ -100,45 +127,104 @@ export const MapView = memo(function MapView({
         style={{ width: '100%', height: '100%' }}
       >
         <ZoomableGroup>
+          {/* Background geographies */}
           <Geographies geography={config.geoUrl}>
             {({ geographies }) =>
-              geographies.map((geo) => {
-                const id = getLocationId(geo, config);
-                const isVisited = id ? visitedSet.has(id) : false;
+              geographies
+                .filter((geo) => shouldShowGeo(geo, config))
+                .map((geo) => {
+                  if (isMarkerMode) {
+                    // Non-interactive background for marker mode
+                    return (
+                      <Geography
+                        key={geo.rsmKey}
+                        geography={geo}
+                        style={{
+                          default: {
+                            fill: '#1e293b',
+                            stroke: '#334155',
+                            strokeWidth: 0.5,
+                            outline: 'none',
+                          },
+                          hover: {
+                            fill: '#1e293b',
+                            stroke: '#334155',
+                            strokeWidth: 0.5,
+                            outline: 'none',
+                          },
+                          pressed: {
+                            fill: '#1e293b',
+                            stroke: '#334155',
+                            strokeWidth: 0.5,
+                            outline: 'none',
+                          },
+                        }}
+                      />
+                    );
+                  }
 
-                return (
-                  <Geography
-                    key={geo.rsmKey}
-                    geography={geo}
-                    onClick={() => handleClick(geo)}
-                    onMouseMove={(evt) => handleMouseMove(geo, evt)}
-                    onMouseLeave={handleMouseLeave}
-                    style={{
-                      default: {
-                        fill: isVisited ? '#22c55e' : '#334155',
-                        stroke: '#1e293b',
-                        strokeWidth: 0.5,
-                        outline: 'none',
-                      },
-                      hover: {
-                        fill: isVisited ? '#16a34a' : '#475569',
-                        stroke: '#1e293b',
-                        strokeWidth: 0.5,
-                        outline: 'none',
-                        cursor: 'pointer',
-                      },
-                      pressed: {
-                        fill: isVisited ? '#15803d' : '#64748b',
-                        stroke: '#1e293b',
-                        strokeWidth: 0.5,
-                        outline: 'none',
-                      },
-                    }}
-                  />
-                );
-              })
+                  // Interactive region mode
+                  const id = getLocationId(geo, config);
+                  const isVisited = id ? visitedSet.has(id) : false;
+                  return (
+                    <Geography
+                      key={geo.rsmKey}
+                      geography={geo}
+                      onClick={() => handleGeoClick(geo)}
+                      onMouseMove={(evt) => handleGeoMouseMove(geo, evt)}
+                      onMouseLeave={hideTooltip}
+                      style={{
+                        default: {
+                          fill: isVisited ? '#22c55e' : '#334155',
+                          stroke: '#1e293b',
+                          strokeWidth: 0.5,
+                          outline: 'none',
+                        },
+                        hover: {
+                          fill: isVisited ? '#16a34a' : '#475569',
+                          stroke: '#1e293b',
+                          strokeWidth: 0.5,
+                          outline: 'none',
+                          cursor: 'pointer',
+                        },
+                        pressed: {
+                          fill: isVisited ? '#15803d' : '#64748b',
+                          stroke: '#1e293b',
+                          strokeWidth: 0.5,
+                          outline: 'none',
+                        },
+                      }}
+                    />
+                  );
+                })
             }
           </Geographies>
+
+          {/* Point markers (only in marker mode) */}
+          {isMarkerMode &&
+            config.locations.map((loc) => {
+              if (!loc.coordinates) return null;
+              const isVisited = visitedSet.has(loc.id);
+              return (
+                <Marker
+                  key={loc.id}
+                  coordinates={loc.coordinates}
+                  onClick={() => handleMarkerClick(loc.id)}
+                  onMouseMove={(evt) =>
+                    handleMarkerMouseMove(loc.id, loc.name, evt)
+                  }
+                  onMouseLeave={hideTooltip}
+                >
+                  <circle
+                    r={4}
+                    fill={isVisited ? '#22c55e' : '#94a3b8'}
+                    stroke={isVisited ? '#15803d' : '#64748b'}
+                    strokeWidth={1.5}
+                    style={{ cursor: 'pointer', transition: 'fill 0.15s' }}
+                  />
+                </Marker>
+              );
+            })}
         </ZoomableGroup>
       </ComposableMap>
 

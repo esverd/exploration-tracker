@@ -1,15 +1,17 @@
 # Exploration Tracker
 
-A web app to track your explorations around the world. Mark countries, US states, and more on interactive maps. See where you've been and where you still want to go.
+A web app to track your explorations around the world. Mark countries, US states, Texas state parks, and more on interactive maps. See where you've been and where you still want to go.
 
 ## Features
 
 - **Interactive World Map** - Click countries to mark them as visited
 - **Interactive US States Map** - Click states to mark them as visited
+- **Texas State Parks** - Point markers for 80+ state parks, natural areas, and historic sites
 - **Side Panel Lists** - See visited / not visited locations at a glance with search
 - **Visit Details** - Record how many times you've been, specific dates, and notes
 - **Progress Tracking** - Visual progress bar showing your exploration percentage
-- **Configurable** - Easy to add new exploration types (see below)
+- **Two exploration modes** - Region-based (click polygons) and marker-based (click points)
+- **Extensible** - Add your own exploration modes with minimal code (see guide below)
 - **Private Data** - Your personal data file is gitignored by default
 - **Configurable Storage** - Choose where your data file lives on your system
 
@@ -52,43 +54,62 @@ DATA_FILE_PATH=~/Desktop/my-explorations.json npm run dev
 
 ## Adding New Explorations
 
-The app is designed to be extensible. To add a new exploration type (e.g., National Parks, European Countries, etc.):
+The app is designed to be extensible. There are two types of exploration modes:
 
-1. Create a new location list file in `src/config/` (follow the pattern of `us-states.ts`):
+1. **Region-based** - Clickable geographic polygons (countries, states, counties)
+2. **Marker-based** - Point markers on a background map (parks, landmarks, cities)
+
+For a **full step-by-step guide** with examples of both types, see **[ADDING_EXPLORATIONS.md](./ADDING_EXPLORATIONS.md)**.
+
+### Quick example (region-based)
 
 ```typescript
+// 1. Create src/config/my-locations.ts
 import type { LocationConfig } from '../types';
-
 export const MY_LOCATIONS: LocationConfig[] = [
-  { id: 'location-1', name: 'Location 1' },
-  { id: 'location-2', name: 'Location 2' },
-  // ...
+  { id: 'France', name: 'France' },
+  { id: 'Germany', name: 'Germany' },
 ];
-```
 
-2. Add the exploration to `src/config/explorations.ts`:
-
-```typescript
-import { MY_LOCATIONS } from './my-locations';
-
-// Add to the EXPLORATIONS array:
+// 2. Add to src/config/explorations.ts
 {
   id: 'my-exploration',
-  name: 'My Exploration',
-  icon: '\u{1F3D4}',
-  mapType: 'world', // or 'us-states' for US-based maps
-  geoUrl: '/geo/my-map-data.json', // TopoJSON file in public/geo/
+  name: 'My Map',
+  icon: '\u{1F5FA}',
+  mapType: 'custom',
+  geoUrl: '/geo/my-map-data.json',
   locations: MY_LOCATIONS,
-  topoKey: 'objects-key', // key in TopoJSON objects
-  matchProperty: 'name', // property in geo data to match location IDs
-  projection: 'geoEqualEarth',
-  projectionConfig: { scale: 160 },
+  topoKey: 'countries',
+  matchProperty: 'name',
+  projection: 'geoMercator',
+  projectionConfig: { scale: 600, center: [15, 52] },
 }
 ```
 
-3. Place your TopoJSON map data file in `public/geo/`
+### Quick example (marker-based)
 
-4. Restart the dev server - the new tab appears automatically
+```typescript
+// 1. Create src/config/my-points.ts
+import type { LocationConfig } from '../types';
+export const MY_POINTS: LocationConfig[] = [
+  { id: 'point-1', name: 'My Favorite Spot', coordinates: [-97.74, 30.27] },
+];
+
+// 2. Add to src/config/explorations.ts
+{
+  id: 'my-points',
+  name: 'My Points',
+  icon: '\u{1F4CD}',
+  mapType: 'custom',
+  geoUrl: '/geo/us-states-10m.json',
+  locations: MY_POINTS,
+  topoKey: 'states',
+  matchProperty: 'name',
+  useMarkers: true,
+  projection: 'geoMercator',
+  projectionConfig: { scale: 2400, center: [-99.5, 31.5] },
+}
+```
 
 ## Tech Stack
 
