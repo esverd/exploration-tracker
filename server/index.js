@@ -1,0 +1,205 @@
+import express from 'express';
+import cors from 'cors';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const ROOT_DIR = path.resolve(__dirname, '..');
+
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+app.use(cors());
+app.use(express.json());
+
+// --- Data file management ---
+
+const DEFAULT_DATA_DIR = path.join(ROOT_DIR, 'data');
+const DEFAULT_DATA_FILE = path.join(DEFAULT_DATA_DIR, 'exploration-data.json');
+const SETTINGS_FILE = path.join(ROOT_DIR, '.exploration-settings.json');
+
+function getSettings() {
+  try {
+    if (fs.existsSync(SETTINGS_FILE)) {
+      const raw = fs.readFileSync(SETTINGS_FILE, 'utf-8');
+      return JSON.parse(raw);
+    }
+  } catch {
+    // ignore parse errors
+  }
+  return { dataFilePath: DEFAULT_DATA_FILE };
+}
+
+function saveSettings(settings) {
+  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf-8');
+}
+
+function getDataFilePath() {
+  const settings = getSettings();
+  return settings.dataFilePath || DEFAULT_DATA_FILE;
+}
+
+function ensureDataFile(filePath) {
+  const dir = path.dirname(filePath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  if (!fs.existsSync(filePath)) {
+    const defaultData = { explorations: {} };
+    fs.writeFileSync(filePath, JSON.stringify(defaultData, null, 2), 'utf-8');
+    console.log(`Created new data file at: ${filePath}`);
+  }
+}
+
+function readData() {
+  const filePath = getDataFilePath();
+  ensureDataFile(filePath);
+  const raw = fs.readFileSync(filePath, 'utf-8');
+  return JSON.parse(raw);
+}
+
+function writeData(data) {
+  const filePath = getDataFilePath();
+  ensureDataFile(filePath);
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+}
+
+// --- API Routes ---
+
+// Get all exploration data
+app.get('/api/data', (_req, res) => {
+  try {
+    const data = readData();
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Save all exploration data
+app.put('/api/data', (req, res) => {
+  try {
+    writeData(req.body);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Toggle a location's visited status
+app.post('/api/data/:explorationId/:locationId/toggle', (req, res) => {
+  try {
+    const { explorationId, locationId } = req.params;
+    const data = readData();
+
+    if (!data.explorations[explorationId]) {
+      data.explorations[explorationId] = {};
+    }
+
+    const current = data.explorations[explorationId][locationId];
+    if (current && current.visited) {
+      // Unmark - remove the entry
+      delete data.explorations[explorationId][locationId];
+    } else {
+      // Mark as visited
+      data.explorations[explorationId][locationId] = {
+        visited: true,
+        ...(current || {}),
+      };
+    }
+
+    writeData(data);
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Update location details (visit count, dates, notes)
+app.put('/api/data/:explorationId/:locationId', (req, res) => {
+  try {
+    const { explorationId, locationId } = req.params;
+    const data = readData();
+
+    if (!data.explorations[explorationId]) {
+      data.explorations[explorationId] = {};
+    }
+
+    data.explorations[explorationId][locationId] = {
+      ...data.explorations[explorationId][locationId],
+      ...req.body,
+      visited: true,
+    };
+
+    writeData(data);
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Get settings
+app.get('/api/settings', (_req, res) => {
+  try {
+    const settings = getSettings();
+    res.json({ success: true, data: settings });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Update settings
+app.put('/api/settings', (req, res) => {
+  try {
+    const newSettings = req.body;
+
+    // If the data file path changed, migrate data
+    const oldSettings = getSettings();
+    if (
+      newSettings.dataFilePath &&
+      newSettings.dataFilePath !== oldSettings.dataFilePath
+    ) {
+      const oldPath = oldSettings.dataFilePath || DEFAULT_DATA_FILE;
+      const newPath = newSettings.dataFilePath;
+
+      // Ensure the new path's directory exists
+      const newDir = path.dirname(newPath);
+      if (!fs.existsSync(newDir)) {
+        fs.mkdirSync(newDir, { recursive: true });
+      }
+
+      // Copy existing data to new location if old file exists and new doesn't
+      if (fs.existsSync(oldPath) && !fs.existsSync(newPath)) {
+        fs.copyFileSync(oldPath, newPath);
+        console.log(`Migrated data from ${oldPath} to ${newPath}`);
+      }
+    }
+
+    saveSettings(newSettings);
+    res.json({ success: true, data: newSettings });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// --- Serve static files in production ---
+const distPath = path.join(ROOT_DIR, 'dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.get('{*path}', (_req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
+
+// --- Start server ---
+app.listen(PORT, () => {
+  const dataPath = getDataFilePath();
+  ensureDataFile(dataPath);
+  console.log(`Exploration Tracker server running on http://localhost:${PORT}`);
+  console.log(`Data file: ${dataPath}`);
+});
