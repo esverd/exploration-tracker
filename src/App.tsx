@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { EXPLORATIONS } from './config/explorations';
 import { useExplorationData } from './hooks/useExplorationData';
+import { usePWAInstall } from './hooks/usePWAInstall';
 import { ToastProvider } from './contexts/ToastContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastContainer } from './components/Toast';
@@ -18,6 +19,8 @@ type View =
 function AppContent() {
   const [view, setView] = useState<View>({ type: 'dashboard' });
   const explorationData = useExplorationData();
+  const pwa = usePWAInstall();
+  const [installDismissed, setInstallDismissed] = useState(false);
 
   const isTab = (v: View, tab: string, index?: number): boolean => {
     if (v.type === tab) {
@@ -112,6 +115,24 @@ function AppContent() {
             ) : null}
           </div>
         </>
+      )}
+
+      {pwa.canInstall && !installDismissed && (
+        <div className="pwa-install-banner">
+          <span className="pwa-install-text">
+            Install Exploration Tracker as an app for a better experience
+          </span>
+          <button className="btn btn-primary btn-sm" onClick={pwa.install}>
+            Install
+          </button>
+          <button
+            className="pwa-install-dismiss"
+            onClick={() => setInstallDismissed(true)}
+            aria-label="Dismiss"
+          >
+            {'\u00D7'}
+          </button>
+        </div>
       )}
 
       <ToastContainer />

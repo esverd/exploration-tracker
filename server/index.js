@@ -3,6 +3,7 @@ import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { exec } from 'child_process';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -196,10 +197,28 @@ if (fs.existsSync(distPath)) {
   });
 }
 
+// --- Open browser helper ---
+function openBrowser(url) {
+  const platform = process.platform;
+  let cmd;
+  if (platform === 'darwin') cmd = `open "${url}"`;
+  else if (platform === 'win32') cmd = `start "" "${url}"`;
+  else cmd = `xdg-open "${url}"`;
+  exec(cmd, (err) => {
+    if (err) console.log('Could not open browser automatically. Please open:', url);
+  });
+}
+
 // --- Start server ---
 app.listen(PORT, () => {
   const dataPath = getDataFilePath();
   ensureDataFile(dataPath);
-  console.log(`Exploration Tracker server running on http://localhost:${PORT}`);
+  const url = `http://localhost:${PORT}`;
+  console.log(`Exploration Tracker server running on ${url}`);
   console.log(`Data file: ${dataPath}`);
+
+  // Auto-open browser when launched via start script (OPEN_BROWSER=1)
+  if (process.env.OPEN_BROWSER === '1') {
+    openBrowser(url);
+  }
 });
