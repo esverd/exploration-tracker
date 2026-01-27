@@ -1,20 +1,41 @@
 import { useState } from 'react';
 import { EXPLORATIONS } from './config/explorations';
 import { useExplorationData } from './hooks/useExplorationData';
+import { ToastProvider } from './contexts/ToastContext';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { ToastContainer } from './components/Toast';
 import { ExplorationView } from './components/ExplorationView';
+import { Dashboard } from './components/Dashboard';
+import { Statistics } from './components/Statistics';
 import { SettingsPage } from './components/SettingsPage';
 
-type View = { type: 'exploration'; index: number } | { type: 'settings' };
+type View =
+  | { type: 'dashboard' }
+  | { type: 'exploration'; index: number }
+  | { type: 'statistics' }
+  | { type: 'settings' };
 
-export default function App() {
-  const [view, setView] = useState<View>({ type: 'exploration', index: 0 });
+function AppContent() {
+  const [view, setView] = useState<View>({ type: 'dashboard' });
   const explorationData = useExplorationData();
+
+  const isTab = (v: View, tab: string, index?: number): boolean => {
+    if (v.type === tab) {
+      if (index !== undefined && v.type === 'exploration') {
+        return (v as { type: 'exploration'; index: number }).index === index;
+      }
+      return true;
+    }
+    return false;
+  };
 
   return (
     <>
       <header className="app-header">
         <h1>
-          <span role="img" aria-label="globe">{'\u{1F30D}'}</span>
+          <span role="img" aria-label="globe">
+            {'\u{1F30D}'}
+          </span>
           Exploration Tracker
         </h1>
         <div className="header-actions">
@@ -24,7 +45,7 @@ export default function App() {
             onClick={() =>
               setView(
                 view.type === 'settings'
-                  ? { type: 'exploration', index: 0 }
+                  ? { type: 'dashboard' }
                   : { type: 'settings' }
               )
             }
@@ -41,15 +62,19 @@ export default function App() {
       ) : (
         <>
           <nav className="tab-bar">
+            <button
+              className={`tab-button ${isTab(view, 'dashboard') ? 'active' : ''}`}
+              onClick={() => setView({ type: 'dashboard' })}
+            >
+              {'\u{1F4CA}'} Overview
+            </button>
             {EXPLORATIONS.map((exploration, i) => {
               const count = explorationData.getVisitedCount(exploration.id);
               return (
                 <button
                   key={exploration.id}
                   className={`tab-button ${
-                    view.type === 'exploration' && view.index === i
-                      ? 'active'
-                      : ''
+                    isTab(view, 'exploration', i) ? 'active' : ''
                   }`}
                   onClick={() => setView({ type: 'exploration', index: i })}
                 >
@@ -59,6 +84,12 @@ export default function App() {
                 </button>
               );
             })}
+            <button
+              className={`tab-button ${isTab(view, 'statistics') ? 'active' : ''}`}
+              onClick={() => setView({ type: 'statistics' })}
+            >
+              {'\u{1F4C8}'} Stats
+            </button>
           </nav>
 
           <div className="app-content">
@@ -66,15 +97,34 @@ export default function App() {
               <div className="loading">Loading exploration data...</div>
             ) : explorationData.error ? (
               <div className="error-banner">{explorationData.error}</div>
-            ) : (
+            ) : view.type === 'dashboard' ? (
+              <Dashboard
+                explorationData={explorationData}
+                onNavigate={(i) => setView({ type: 'exploration', index: i })}
+              />
+            ) : view.type === 'statistics' ? (
+              <Statistics explorationData={explorationData} />
+            ) : view.type === 'exploration' ? (
               <ExplorationView
                 config={EXPLORATIONS[view.index]}
                 explorationData={explorationData}
               />
-            )}
+            ) : null}
           </div>
         </>
       )}
+
+      <ToastContainer />
     </>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
+    </ThemeProvider>
   );
 }

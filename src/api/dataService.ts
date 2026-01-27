@@ -66,4 +66,32 @@ export const dataService = {
       body: JSON.stringify(settings),
     });
   },
+
+  /** Export data as a downloadable JSON file */
+  async exportData(): Promise<void> {
+    const data = await this.getData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `exploration-data-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
+
+  /** Import data from a JSON file */
+  async importData(file: File): Promise<ExplorationData> {
+    const text = await file.text();
+    const data = JSON.parse(text) as ExplorationData;
+    if (!data.explorations || typeof data.explorations !== 'object') {
+      throw new Error('Invalid data file: missing "explorations" object');
+    }
+    await request('/data', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return data;
+  },
 };

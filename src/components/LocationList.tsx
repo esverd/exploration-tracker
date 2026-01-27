@@ -1,6 +1,9 @@
 import { useState, useMemo } from 'react';
 import type { ExplorationConfig } from '../types';
 import type { useExplorationData } from '../hooks/useExplorationData';
+import { CONTINENT_MAP, CONTINENTS } from '../config/continents';
+
+type SortOption = 'name-asc' | 'name-desc' | 'count-desc' | 'recent';
 
 interface Props {
   config: ExplorationConfig;
@@ -18,12 +21,24 @@ export function LocationList({
   onOpenDetail,
 }: Props) {
   const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>('name-asc');
+  const [continentFilter, setContinentFilter] = useState<string>('all');
+
+  const isWorldExploration = config.id === 'world';
 
   const { visited, notVisited } = useMemo(() => {
     const searchLower = search.toLowerCase();
-    const filtered = config.locations.filter((loc) =>
+
+    let filtered = config.locations.filter((loc) =>
       loc.name.toLowerCase().includes(searchLower)
     );
+
+    // Apply continent filter for world exploration
+    if (isWorldExploration && continentFilter !== 'all') {
+      filtered = filtered.filter(
+        (loc) => CONTINENT_MAP[loc.id] === continentFilter
+      );
+    }
 
     const v: typeof filtered = [];
     const nv: typeof filtered = [];
@@ -36,11 +51,40 @@ export function LocationList({
       }
     }
 
-    v.sort((a, b) => a.name.localeCompare(b.name));
-    nv.sort((a, b) => a.name.localeCompare(b.name));
+    // Sort function
+    const sortFn = (a: (typeof filtered)[0], b: (typeof filtered)[0]) => {
+      if (sortBy === 'name-asc') return a.name.localeCompare(b.name);
+      if (sortBy === 'name-desc') return b.name.localeCompare(a.name);
+      if (sortBy === 'count-desc') {
+        const aData = explorationData.getLocationData(config.id, a.id);
+        const bData = explorationData.getLocationData(config.id, b.id);
+        const aCount = aData?.visitCount ?? 0;
+        const bCount = bData?.visitCount ?? 0;
+        if (bCount !== aCount) return bCount - aCount;
+        return a.name.localeCompare(b.name);
+      }
+      if (sortBy === 'recent') {
+        const aData = explorationData.getLocationData(config.id, a.id);
+        const bData = explorationData.getLocationData(config.id, b.id);
+        const aDate =
+          aData?.visitDates && aData.visitDates.length > 0
+            ? [...aData.visitDates].sort().reverse()[0]
+            : '';
+        const bDate =
+          bData?.visitDates && bData.visitDates.length > 0
+            ? [...bData.visitDates].sort().reverse()[0]
+            : '';
+        if (bDate !== aDate) return bDate.localeCompare(aDate);
+        return a.name.localeCompare(b.name);
+      }
+      return 0;
+    };
+
+    v.sort(sortFn);
+    nv.sort(sortFn);
 
     return { visited: v, notVisited: nv };
-  }, [config.locations, visitedSet, search]);
+  }, [config, visitedSet, search, sortBy, continentFilter, isWorldExploration, explorationData]);
 
   const formatMeta = (locationId: string): string | null => {
     const data = explorationData.getLocationData(config.id, locationId);
@@ -57,7 +101,8 @@ export function LocationList({
     return parts.length > 0 ? parts.join(' \u00B7 ') : null;
   };
 
-  const noResults = visited.length === 0 && notVisited.length === 0 && search.length > 0;
+  const noResults =
+    visited.length === 0 && notVisited.length === 0 && search.length > 0;
 
   return (
     <aside className="side-panel">
@@ -69,6 +114,34 @@ export function LocationList({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        <div className="list-controls">
+          <select
+            className="list-select"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortOption)}
+            aria-label="Sort locations"
+          >
+            <option value="name-asc">Name A-Z</option>
+            <option value="name-desc">Name Z-A</option>
+            <option value="count-desc">Most Visits</option>
+            <option value="recent">Most Recent</option>
+          </select>
+          {isWorldExploration && (
+            <select
+              className="list-select"
+              value={continentFilter}
+              onChange={(e) => setContinentFilter(e.target.value)}
+              aria-label="Filter by continent"
+            >
+              <option value="all">All Continents</option>
+              {CONTINENTS.filter((c) => c !== 'Antarctica').map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
       </div>
 
       <div className="side-panel-content">
