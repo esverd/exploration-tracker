@@ -68,6 +68,11 @@ export const MapView = memo(
       setZoom((z) => Math.max(z / 1.5, 1));
     }, []);
 
+    const handleZoomReset = useCallback(() => {
+      setZoom(1);
+      setCenter([0, 0]);
+    }, []);
+
     const handleMoveEnd = useCallback(
       (position: { coordinates: [number, number]; zoom: number }) => {
         setCenter(position.coordinates);
@@ -276,6 +281,16 @@ export const MapView = memo(
           >
             {'\u2212'}
           </button>
+          {zoom !== 1 && (
+            <button
+              className="map-zoom-btn"
+              onClick={handleZoomReset}
+              title="Reset zoom"
+              aria-label="Reset zoom"
+            >
+              {'\u21BA'}
+            </button>
+          )}
         </div>
 
         {/* Map Legend */}
