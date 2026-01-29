@@ -236,6 +236,68 @@
 4. **Toggle/Undo:** API-level toggle twice restores original state
 5. **Config Validation:** 206 countries, 51 states, 89 Texas parks configured
 
+### Session 2 - 2026-01-29
+
+#### Vitest Component Tests Added (44 tests total, all passing)
+
+**Dashboard Tests (7 tests):**
+- [x] renders the dashboard header ✅
+- [x] displays total explored count ✅
+- [x] shows exploration cards with correct counts ✅
+- [x] calls onNavigate when clicking exploration card ✅
+- [x] shows continent breakdown for world exploration ✅
+- [x] displays recent visits when there are visit dates ✅
+- [x] shows getting started message when no recent visits ✅
+
+**LocationList Tests (14 tests):**
+- [x] filters locations by search term ✅
+- [x] shows empty state when no results found ✅
+- [x] search is case-insensitive ✅
+- [x] sorts by name A-Z by default ✅
+- [x] changes sort order when selecting different option ✅
+- [x] sorts by visit count when selected ✅
+- [x] shows continent filter for world exploration ✅
+- [x] filters by continent when selected ✅
+- [x] does not show continent filter for non-world explorations ✅
+- [x] calls onToggle when clicking a location ✅
+- [x] shows cogwheel button only for visited locations ✅
+- [x] calls onOpenDetail when clicking cogwheel ✅
+- [x] separates visited and not visited sections ✅
+- [x] shows visit metadata for visited locations ✅
+
+**Statistics Tests (12 tests):**
+- [x] renders progress bars for each exploration ✅
+- [x] shows correct counts in progress bars ✅
+- [x] handles empty data gracefully ✅
+- [x] renders visits by year section when there are dates ✅
+- [x] shows years with visit dates ✅
+- [x] does not show visits by year section when no dated visits ✅
+- [x] renders most visited section when locations have visitCount > 1 ✅
+- [x] shows visit count for locations with more than 1 visit ✅
+- [x] does not show most visited section when no locations have visitCount > 1 ✅
+- [x] groups by exploration ✅
+- [x] shows world continents section ✅
+- [x] renders statistics header ✅
+
+**Toast Tests (11 tests):**
+- [x] shows toast when showToast is called ✅
+- [x] auto-dismisses toast after default duration (4000ms) ✅
+- [x] uses custom duration when specified ✅
+- [x] does not auto-dismiss when duration is 0 ✅
+- [x] allows manual dismissal ✅
+- [x] clears timer when manually dismissed (no lingering timers) ✅
+- [x] shows multiple toasts ✅
+- [x] renders toasts with action buttons ✅
+- [x] calls action onClick when action button clicked ✅
+- [x] has dismiss button on toasts ✅
+- [x] undo action reverts the toggle ✅
+
+**To run tests:**
+```bash
+npm test        # Run all tests once
+npm run test:watch  # Run tests in watch mode
+```
+
 #### Observations:
 1. API accepts any explorationId/locationId - stores even if not in config
 2. Server auto-creates data directory and file on first run
