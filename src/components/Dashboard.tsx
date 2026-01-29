@@ -85,11 +85,20 @@ export function Dashboard({ explorationData, onNavigate }: Props) {
               key={exp.id}
               className="dash-card dash-card-link"
               onClick={() => onNavigate(i)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onNavigate(i);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-label={`${exp.name}: ${visited} of ${total} visited (${pct}%). Click to explore.`}
             >
-              <div className="dash-card-icon">{exp.icon}</div>
+              <div className="dash-card-icon" aria-hidden="true">{exp.icon}</div>
               <div className="dash-card-value">{visited}</div>
               <div className="dash-card-label">{exp.name}</div>
-              <div className="dash-card-bar">
+              <div className="dash-card-bar" aria-hidden="true">
                 <div
                   className="dash-card-bar-fill"
                   style={{ width: `${pct}%` }}
@@ -107,16 +116,28 @@ export function Dashboard({ explorationData, onNavigate }: Props) {
       {worldConfig && (
         <div className="dashboard-section">
           <h3>World: Continent Breakdown</h3>
-          <div className="continent-bars">
+          <div className="continent-bars" role="list" aria-label="Continent progress">
             {continentStats.map((cs) => {
               const pct =
                 cs.total > 0
                   ? Math.round((cs.visited / cs.total) * 100)
                   : 0;
               return (
-                <div key={cs.continent} className="continent-row">
+                <div
+                  key={cs.continent}
+                  className="continent-row"
+                  role="listitem"
+                  aria-label={`${cs.continent}: ${cs.visited} of ${cs.total} countries visited`}
+                >
                   <span className="continent-name">{cs.continent}</span>
-                  <div className="continent-bar">
+                  <div
+                    className="continent-bar"
+                    role="progressbar"
+                    aria-valuenow={cs.visited}
+                    aria-valuemin={0}
+                    aria-valuemax={cs.total}
+                    aria-label={`${pct}% complete`}
+                  >
                     <div
                       className="continent-bar-fill"
                       style={{ width: `${pct}%` }}

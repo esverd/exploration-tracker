@@ -330,4 +330,137 @@ describe('LocationList Component', () => {
       expect(screen.getByText(/2024-06-15/)).toBeInTheDocument();
     });
   });
+
+  describe('Accessibility', () => {
+    it('location items have role="button" for keyboard navigation', () => {
+      const visitedSet = new Set(['France']);
+      const explorationData = createMockExplorationData({ France: { visited: true } });
+
+      render(
+        <LocationList
+          config={worldConfig}
+          visitedSet={visitedSet}
+          explorationData={explorationData}
+          onToggle={mockOnToggle}
+          onOpenDetail={mockOnOpenDetail}
+        />
+      );
+
+      const franceItem = screen.getByText('France').closest('.location-item');
+      expect(franceItem).toHaveAttribute('role', 'button');
+      expect(franceItem).toHaveAttribute('tabIndex', '0');
+    });
+
+    it('visited items have aria-pressed="true"', () => {
+      const visitedSet = new Set(['France']);
+      const explorationData = createMockExplorationData({ France: { visited: true } });
+
+      render(
+        <LocationList
+          config={worldConfig}
+          visitedSet={visitedSet}
+          explorationData={explorationData}
+          onToggle={mockOnToggle}
+          onOpenDetail={mockOnOpenDetail}
+        />
+      );
+
+      const franceItem = screen.getByText('France').closest('.location-item');
+      expect(franceItem).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    it('not visited items have aria-pressed="false"', () => {
+      const visitedSet = new Set<string>();
+      const explorationData = createMockExplorationData();
+
+      render(
+        <LocationList
+          config={worldConfig}
+          visitedSet={visitedSet}
+          explorationData={explorationData}
+          onToggle={mockOnToggle}
+          onOpenDetail={mockOnOpenDetail}
+        />
+      );
+
+      const franceItem = screen.getByText('France').closest('.location-item');
+      expect(franceItem).toHaveAttribute('aria-pressed', 'false');
+    });
+
+    it('triggers toggle on Enter key press', () => {
+      const visitedSet = new Set<string>();
+      const explorationData = createMockExplorationData();
+
+      render(
+        <LocationList
+          config={worldConfig}
+          visitedSet={visitedSet}
+          explorationData={explorationData}
+          onToggle={mockOnToggle}
+          onOpenDetail={mockOnOpenDetail}
+        />
+      );
+
+      const franceItem = screen.getByText('France').closest('.location-item');
+      expect(franceItem).toBeTruthy();
+      fireEvent.keyDown(franceItem!, { key: 'Enter' });
+      expect(mockOnToggle).toHaveBeenCalledWith('France');
+    });
+
+    it('triggers toggle on Space key press', () => {
+      const visitedSet = new Set<string>();
+      const explorationData = createMockExplorationData();
+
+      render(
+        <LocationList
+          config={worldConfig}
+          visitedSet={visitedSet}
+          explorationData={explorationData}
+          onToggle={mockOnToggle}
+          onOpenDetail={mockOnOpenDetail}
+        />
+      );
+
+      const franceItem = screen.getByText('France').closest('.location-item');
+      expect(franceItem).toBeTruthy();
+      fireEvent.keyDown(franceItem!, { key: ' ' });
+      expect(mockOnToggle).toHaveBeenCalledWith('France');
+    });
+
+    it('search input has aria-label', () => {
+      const visitedSet = new Set<string>();
+      const explorationData = createMockExplorationData();
+
+      render(
+        <LocationList
+          config={worldConfig}
+          visitedSet={visitedSet}
+          explorationData={explorationData}
+          onToggle={mockOnToggle}
+          onOpenDetail={mockOnOpenDetail}
+        />
+      );
+
+      const searchInput = screen.getByPlaceholderText(/search/i);
+      expect(searchInput).toHaveAttribute('aria-label');
+    });
+
+    it('cogwheel button has descriptive aria-label', () => {
+      const visitedSet = new Set(['France']);
+      const explorationData = createMockExplorationData({ France: { visited: true } });
+
+      render(
+        <LocationList
+          config={worldConfig}
+          visitedSet={visitedSet}
+          explorationData={explorationData}
+          onToggle={mockOnToggle}
+          onOpenDetail={mockOnOpenDetail}
+        />
+      );
+
+      const cogwheel = screen.getByTitle('Edit visit details');
+      expect(cogwheel).toHaveAttribute('aria-label', 'Edit visit details for France');
+    });
+  });
 });

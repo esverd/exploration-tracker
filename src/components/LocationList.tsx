@@ -113,6 +113,7 @@ export function LocationList({
           placeholder={`Search ${config.locations.length} ${config.name.toLowerCase()}...`}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          aria-label={`Search ${config.name}`}
         />
         <div className="list-controls">
           <select
@@ -163,13 +164,24 @@ export function LocationList({
                   key={loc.id}
                   className="location-item"
                   onClick={() => onToggle(loc.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onToggle(loc.id);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed="true"
+                  aria-label={`${loc.name}, visited. Press to unmark.`}
                 >
-                  <div className="location-checkbox checked" />
+                  <div className="location-checkbox checked" aria-hidden="true" />
                   <span className="location-name">{loc.name}</span>
                   {meta && <span className="location-meta">{meta}</span>}
                   <button
                     className="location-settings-btn"
                     title="Edit visit details"
+                    aria-label={`Edit visit details for ${loc.name}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       onOpenDetail(loc.id);
@@ -193,8 +205,18 @@ export function LocationList({
                 key={loc.id}
                 className="location-item"
                 onClick={() => onToggle(loc.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onToggle(loc.id);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-pressed="false"
+                aria-label={`${loc.name}, not visited. Press to mark as visited.`}
               >
-                <div className="location-checkbox" />
+                <div className="location-checkbox" aria-hidden="true" />
                 <span className="location-name">{loc.name}</span>
               </div>
             ))}

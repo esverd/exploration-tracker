@@ -18,6 +18,34 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+// --- Validation config ---
+const VALID_IDS_PATH = path.join(__dirname, 'valid-ids.json');
+let validIds = { explorations: {} };
+
+function loadValidIds() {
+  try {
+    if (fs.existsSync(VALID_IDS_PATH)) {
+      validIds = JSON.parse(fs.readFileSync(VALID_IDS_PATH, 'utf-8'));
+    } else {
+      console.warn('Warning: valid-ids.json not found. Run "node scripts/generate-validation-config.js" to generate it.');
+    }
+  } catch (err) {
+    console.error('Error loading validation config:', err.message);
+  }
+}
+
+function isValidExploration(explorationId) {
+  return explorationId in validIds.explorations;
+}
+
+function isValidLocation(explorationId, locationId) {
+  const locations = validIds.explorations[explorationId];
+  return locations && locations.includes(locationId);
+}
+
+// Load validation config on startup
+loadValidIds();
+
 // --- Data file management ---
 
 const DEFAULT_DATA_DIR = path.join(ROOT_DIR, 'data');
@@ -82,11 +110,52 @@ app.get('/api/data', (_req, res) => {
   }
 });
 
-// Save all exploration data
+// Save all exploration data (import)
 app.put('/api/data', (req, res) => {
   try {
-    writeData(req.body);
-    res.json({ success: true });
+    const importData = req.body;
+
+    // Validate structure
+    if (!importData || typeof importData !== 'object') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid data format: expected an object',
+      });
+    }
+
+    if (!importData.explorations || typeof importData.explorations !== 'object') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid data format: missing "explorations" object',
+      });
+    }
+
+    // Validate explorations and locations, collect warnings for invalid entries
+    const warnings = [];
+    const cleanedData = { explorations: {} };
+
+    for (const [expId, locations] of Object.entries(importData.explorations)) {
+      if (!isValidExploration(expId)) {
+        warnings.push(`Skipped invalid exploration: "${expId}"`);
+        continue;
+      }
+
+      cleanedData.explorations[expId] = {};
+
+      for (const [locId, locData] of Object.entries(locations)) {
+        if (!isValidLocation(expId, locId)) {
+          warnings.push(`Skipped invalid location: "${locId}" in "${expId}"`);
+          continue;
+        }
+        cleanedData.explorations[expId][locId] = locData;
+      }
+    }
+
+    writeData(cleanedData);
+    res.json({
+      success: true,
+      warnings: warnings.length > 0 ? warnings : undefined,
+    });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -96,6 +165,21 @@ app.put('/api/data', (req, res) => {
 app.post('/api/data/:explorationId/:locationId/toggle', (req, res) => {
   try {
     const { explorationId, locationId } = req.params;
+
+    // Validate exploration and location IDs
+    if (!isValidExploration(explorationId)) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid exploration: "${explorationId}"`,
+      });
+    }
+    if (!isValidLocation(explorationId, locationId)) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid location: "${locationId}" for exploration "${explorationId}"`,
+      });
+    }
+
     const data = readData();
 
     if (!data.explorations[explorationId]) {
@@ -125,6 +209,21 @@ app.post('/api/data/:explorationId/:locationId/toggle', (req, res) => {
 app.put('/api/data/:explorationId/:locationId', (req, res) => {
   try {
     const { explorationId, locationId } = req.params;
+
+    // Validate exploration and location IDs
+    if (!isValidExploration(explorationId)) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid exploration: "${explorationId}"`,
+      });
+    }
+    if (!isValidLocation(explorationId, locationId)) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid location: "${locationId}" for exploration "${explorationId}"`,
+      });
+    }
+
     const data = readData();
 
     if (!data.explorations[explorationId]) {

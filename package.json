@@ -8,11 +8,13 @@
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:client": "vite",
     "dev:server": "node server/index.js",
-    "build": "tsc -b && vite build",
+    "build": "npm run generate-validation && tsc -b && vite build",
     "preview": "npm run build && node server/index.js",
     "start": "node server/index.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "generate-validation": "node scripts/generate-validation-config.js",
+    "postinstall": "npm run generate-validation"
   },
   "keywords": [
     "exploration",
