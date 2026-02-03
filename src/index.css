@@ -147,6 +147,11 @@ body {
 .map-wrapper {
   position: absolute;
   inset: 0;
+  cursor: grab;
+}
+
+.map-wrapper:active {
+  cursor: grabbing;
 }
 
 .map-wrapper svg {

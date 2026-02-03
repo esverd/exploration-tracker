@@ -2,39 +2,40 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Dashboard } from '../components/Dashboard';
+import type { LocationVisitData, ExplorationData } from '../types';
+import type { useExplorationData } from '../hooks/useExplorationData';
 
-// Mock exploration data
-const mockExplorationData = {
-  data: {
-    explorations: {
-      world: {
-        France: { visited: true, visitCount: 3, visitDates: ['2024-06-15'] },
-        Germany: { visited: true },
-        Japan: { visited: true },
-      },
-      'us-states': {
-        Texas: { visited: true },
-        California: { visited: true },
-      },
-      'texas-state-parks': {
-        'big-bend-ranch': { visited: true },
-      },
+// Mock exploration data with proper typing
+const mockData: ExplorationData = {
+  explorations: {
+    world: {
+      France: { visited: true, visitCount: 3, visitDates: ['2024-06-15'] },
+      Germany: { visited: true },
+      Japan: { visited: true },
+    },
+    'us-states': {
+      Texas: { visited: true },
+      California: { visited: true },
+    },
+    'texas-state-parks': {
+      'big-bend-ranch': { visited: true },
     },
   },
+};
+
+const mockExplorationData: ReturnType<typeof useExplorationData> = {
+  data: mockData,
   loading: false,
   error: null,
   isVisited: (expId: string, locId: string) => {
-    const explorations = mockExplorationData.data.explorations as Record<string, Record<string, { visited?: boolean }>>;
-    return !!explorations[expId]?.[locId]?.visited;
+    return !!mockData.explorations[expId]?.[locId]?.visited;
   },
   getVisitedCount: (expId: string) => {
-    const explorations = mockExplorationData.data.explorations as Record<string, Record<string, unknown>>;
-    const exp = explorations[expId];
+    const exp = mockData.explorations[expId];
     return exp ? Object.keys(exp).length : 0;
   },
-  getLocationData: (expId: string, locId: string) => {
-    const explorations = mockExplorationData.data.explorations as Record<string, Record<string, unknown>>;
-    return explorations[expId]?.[locId] || null;
+  getLocationData: (expId: string, locId: string): LocationVisitData | null => {
+    return mockData.explorations[expId]?.[locId] || null;
   },
   toggleLocation: vi.fn(),
   updateLocation: vi.fn(),

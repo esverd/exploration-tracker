@@ -23,14 +23,14 @@ Object.defineProperty(window, 'matchMedia', {
 });
 
 // Mock ResizeObserver
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
+(globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
   unobserve: vi.fn(),
   disconnect: vi.fn(),
 }));
 
 // Mock fetch for API calls
-global.fetch = vi.fn();
+(globalThis as unknown as { fetch: unknown }).fetch = vi.fn();
 
 // Mock URL.createObjectURL for export functionality
 URL.createObjectURL = vi.fn(() => 'blob:mock-url');

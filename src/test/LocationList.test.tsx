@@ -2,15 +2,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { LocationList } from '../components/LocationList';
 import { EXPLORATIONS } from '../config/explorations';
+import type { LocationVisitData, ExplorationData } from '../types';
+import type { useExplorationData } from '../hooks/useExplorationData';
 
 // Mock exploration data
-const createMockExplorationData = (visitedLocations: Record<string, Record<string, unknown>> = {}) => ({
-  data: { explorations: { world: visitedLocations } },
+const createMockExplorationData = (
+  visitedLocations: { [locationId: string]: LocationVisitData } = {}
+): ReturnType<typeof useExplorationData> => ({
+  data: { explorations: { world: visitedLocations } } as ExplorationData,
   loading: false,
   error: null,
-  isVisited: (_expId: string, locId: string) => !!(visitedLocations[locId] as { visited?: boolean } | undefined)?.visited,
+  isVisited: (_expId: string, locId: string) => !!visitedLocations[locId]?.visited,
   getVisitedCount: () => Object.keys(visitedLocations).length,
-  getLocationData: (_expId: string, locId: string) => visitedLocations[locId] || null,
+  getLocationData: (_expId: string, locId: string): LocationVisitData | null => visitedLocations[locId] || null,
   toggleLocation: vi.fn(),
   updateLocation: vi.fn(),
   refetch: vi.fn(),

@@ -1,4 +1,4 @@
-import { useState, useCallback, memo, forwardRef } from 'react';
+import { useState, useCallback, useEffect, useRef, memo, forwardRef } from 'react';
 import {
   ComposableMap,
   Geographies,
@@ -18,6 +18,11 @@ interface TooltipState {
   content: string;
   x: number;
   y: number;
+}
+
+interface MapDimensions {
+  width: number;
+  height: number;
 }
 
 function getLocationId(
@@ -59,6 +64,53 @@ export const MapView = memo(
     const [tooltip, setTooltip] = useState<TooltipState | null>(null);
     const [zoom, setZoom] = useState(1);
     const [center, setCenter] = useState<[number, number]>([0, 0]);
+    const [dimensions, setDimensions] = useState<MapDimensions>({ width: 800, height: 600 });
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    // Track container dimensions for proper map sizing
+    useEffect(() => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const updateDimensions = () => {
+        const rect = container.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          setDimensions({ width: rect.width, height: rect.height });
+        }
+      };
+
+      // Initial measurement
+      updateDimensions();
+
+      // Use ResizeObserver for responsive updates
+      const resizeObserver = new ResizeObserver(updateDimensions);
+      resizeObserver.observe(container);
+
+      return () => {
+        resizeObserver.disconnect();
+      };
+    }, []);
+
+    // Prevent page scroll when using wheel over the map (allow map zoom instead)
+    useEffect(() => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const handleWheel = (e: WheelEvent) => {
+        // Only prevent default if map is zoomable (zoom > 1 or zooming in)
+        e.preventDefault();
+
+        // Calculate new zoom based on wheel delta
+        const zoomDelta = e.deltaY > 0 ? 0.85 : 1.15;
+        setZoom((z) => Math.min(Math.max(z * zoomDelta, 1), 8));
+      };
+
+      container.addEventListener('wheel', handleWheel, { passive: false });
+
+      return () => {
+        container.removeEventListener('wheel', handleWheel);
+      };
+    }, []);
 
     const handleZoomIn = useCallback(() => {
       setZoom((z) => Math.min(z * 1.5, 8));
@@ -142,11 +194,28 @@ export const MapView = memo(
 
     const isMarkerMode = config.useMarkers === true;
 
+    // Merge refs for both the forwarded ref and our internal containerRef
+    const setRefs = useCallback(
+      (node: HTMLDivElement | null) => {
+        // Set containerRef
+        (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+        // Forward the ref
+        if (typeof ref === 'function') {
+          ref(node);
+        } else if (ref) {
+          ref.current = node;
+        }
+      },
+      [ref]
+    );
+
     return (
-      <div ref={ref} className="map-wrapper">
+      <div ref={setRefs} className="map-wrapper">
         <ComposableMap
           projection={config.projection || 'geoEqualEarth'}
           projectionConfig={projectionConfig}
+          width={dimensions.width}
+          height={dimensions.height}
           style={{ width: '100%', height: '100%' }}
         >
           <ZoomableGroup
